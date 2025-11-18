@@ -8,13 +8,12 @@ variables:
 stages:
 
 # ------------------------
-# Stage 1: Build & Push
+# Stage 1: Build Image
 # ------------------------
 - stage: Build
   displayName: Build and Push Docker Image
   jobs:
   - job: Build
-    displayName: Build and Push Image to ACR
     pool:
       vmImage: 'ubuntu-latest'
 
@@ -31,25 +30,71 @@ stages:
         tags: |
           latest
 
-
 # ------------------------
-# Stage 2: Deploy to App Service (with Approvals)
+# Stage 2: Deploy to DEV
 # ------------------------
-- stage: Deploy
-  displayName: Deploy to Azure App Service
+- stage: DeployDev
+  displayName: Deploy to DEV Environment
   dependsOn: Build
   jobs:
-  - deployment: DeployToProd
-    displayName: Deploy to Production
-    environment: 'production'       # <-- This connects to your approval gate
+  - deployment: DeployDevJob
+    displayName: Deploy to DEV
+    environment: dev
+    pool:
+      vmImage: 'ubuntu-latest'
+
     strategy:
       runOnce:
         deploy:
           steps:
           - task: AzureWebAppContainer@1
-            displayName: Deploy Container to App Service
             inputs:
               azureSubscription: 'AzureServiceConnection'
               appName: 'azure-mini-webapp'
               containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
 
+# ------------------------
+# Stage 3: Deploy to STAGE
+# ------------------------
+- stage: DeployStage
+  displayName: Deploy to STAGE Environment
+  dependsOn: DeployDev
+  jobs:
+  - deployment: DeployStageJob
+    displayName: Deploy to STAGE
+    environment: stage
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebAppContainer@1
+            inputs:
+              azureSubscription: 'AzureServiceConnection'
+              appName: 'azure-mini-webapp'
+              containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
+
+# ------------------------
+# Stage 4: Deploy to PROD
+# ------------------------
+- stage: DeployProd
+  displayName: Deploy to PRODUCTION Environment
+  dependsOn: DeployStage
+  jobs:
+  - deployment: DeployProdJob
+    displayName: Deploy to PRODUCTION
+    environment: production   # Approval required here
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebAppContainer@1
+            inputs:
+              azureSubscription: 'AzureServiceConnection'
+              appName: 'azure-mini-webapp'
+              containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
