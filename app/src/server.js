@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
-const port = 80;
+
+// Azure gives your app a dynamic port → REQUIRED
+const port = process.env.PORT || 80;
 
 // Read environment variable (from App Service)
 const env = process.env.APP_ENV || "unknown";
