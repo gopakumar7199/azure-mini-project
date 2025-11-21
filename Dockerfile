@@ -1,25 +1,20 @@
-# Base image
+# Use official Node.js runtime
 FROM node:20-alpine
  
-# Working directory
+# Set working directory
 WORKDIR /app
  
-# Copy package files first
-COPY app/package*.json ./
+# Copy package files
+COPY package*.json ./
  
-# Install production dependencies
-RUN npm ci --omit=dev
+# Install dependencies
+RUN npm install
  
-# Copy the rest of the source code
-COPY app/ ./
- 
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV APP_ENV=production
+# Copy application code
+COPY . .
  
 # Expose port
-EXPOSE 8080
+EXPOSE 3000
  
-# Start the app directly with Node (better than npm)
-CMD ["node", "src/server.js"]
+# Start the application
+CMD ["npm", "start"]
