@@ -1,18 +1,20 @@
-# Use a lightweight Node.js image
+# 1️⃣ Base image
 FROM node:20-alpine
 
-# Set app directory
+# 2️⃣ Working directory
 WORKDIR /app
 
-# Install dependencies
+# 3️⃣ Copy only package files first
 COPY app/package*.json ./
+
+# 4️⃣ Install production dependencies
 RUN npm ci --omit=dev
 
-# Copy app source
+# 5️⃣ Copy the rest of the source code
 COPY app/ ./
 
-# Expose port (any value is fine; Azure ignores this)
+# 6️⃣ Azure sets the PORT env variable, so expose it
 EXPOSE 8080
 
-# Start the app
+# 7️⃣ Start the app
 CMD ["npm", "start"]
