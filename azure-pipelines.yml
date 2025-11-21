@@ -50,38 +50,15 @@ stages:
           - task: AzureWebAppContainer@1
             inputs:
               azureSubscription: 'AzureServiceConnection'
-              appName: 'azure-mini-webapp'
+              appName: 'azure-mini-webapp-dev'
               containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
 
 # ------------------------
-# Stage 3: Deploy to STAGE
-# ------------------------
-- stage: DeployStage
-  displayName: Deploy to STAGE Environment
-  dependsOn: DeployDev
-  jobs:
-  - deployment: DeployStageJob
-    displayName: Deploy to STAGE
-    environment: stage
-    pool:
-      vmImage: 'ubuntu-latest'
-
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: AzureWebAppContainer@1
-            inputs:
-              azureSubscription: 'AzureServiceConnection'
-              appName: 'azure-mini-webapp'
-              containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
-
-# ------------------------
-# Stage 4: Deploy to PROD
+# Stage 3: Deploy to PROD
 # ------------------------
 - stage: DeployProd
   displayName: Deploy to PRODUCTION Environment
-  dependsOn: DeployStage
+  dependsOn: DeployDev
   jobs:
   - deployment: DeployProdJob
     displayName: Deploy to PRODUCTION
