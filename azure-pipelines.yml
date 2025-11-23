@@ -13,68 +13,40 @@ stages:
 # Stage 1: Build Image
 # ------------------------
 - stage: Build
-
   displayName: Build and Push Docker Image
-
   jobs:
-
   - job: Build
-
     pool:
-
       vmImage: 'ubuntu-latest'
- 
     steps:
-
     - checkout: self
  
     # Build & push to DEV ACR when branch = dev
-
     - task: Docker@2
-
       displayName: Build & Push image to DEV ACR
-
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/dev')
-
       inputs:
-
         command: buildAndPush
-
-        containerRegistry: 'azureacr_minidev'      # <-- Docker registry conn
-
+        containerRegistry: 'azureacr_minidev'      # Docker registry connection (DEV)
         repository: '$(imageName)'
-
         dockerfile: '**/Dockerfile'
-
         tags: |
-
           latest
  
     # Build & push to PROD ACR when branch = master
-
     - task: Docker@2
-
       displayName: Build & Push image to PROD ACR
-
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-
       inputs:
-
         command: buildAndPush
-
-        containerRegistry: 'azureacr_mini'         # <-- Docker registry conn
-
+        containerRegistry: 'azureacr_mini'         # Docker registry connection (PROD)
         repository: '$(imageName)'
-
         dockerfile: '**/Dockerfile'
-
         tags: |
-
           latest
-
  
 # ------------------------
-# Stage 2: Deploy to DEV (branch = dev)
+# Stage 2: Deploy to DEV (only when branch = dev)
 # ------------------------
 - stage: DeployDev
   displayName: Deploy to DEV Environment
@@ -86,7 +58,6 @@ stages:
     environment: dev
     pool:
       vmImage: 'ubuntu-latest'
- 
     strategy:
       runOnce:
         deploy:
@@ -94,12 +65,12 @@ stages:
           - task: AzureWebAppContainer@1
             displayName: Deploy DEV Container
             inputs:
-              azureSubscription: 'azureacr_minidev'  # <-- Dev app service connection
+              azureSubscription: 'AzureServiceConnectionNew'           # AzureRM connection
               appName: 'azure-mini-webapp-dev'
-              containers: 'azureminidev.azurecr.io/azure-node-mini:latest'
+              containers: '$(devAcrLoginServer)/$(imageName):latest'
  
 # ------------------------
-# Stage 3: Deploy to PROD (branch = master)
+# Stage 3: Deploy to PROD (only when branch = master)
 # ------------------------
 - stage: DeployProd
   displayName: Deploy to PRODUCTION Environment
@@ -111,7 +82,6 @@ stages:
     environment: production
     pool:
       vmImage: 'ubuntu-latest'
- 
     strategy:
       runOnce:
         deploy:
@@ -119,9 +89,6 @@ stages:
           - task: AzureWebAppContainer@1
             displayName: Deploy PROD Container
             inputs:
-              azureSubscription: 'azureacr_mini'  # <-- Prod app service connection
+              azureSubscription: 'AzureServiceConnectionNew'           # same AzureRM connection
               appName: 'azure-mini-webapp'
-              containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
-
-
-
+              containers: '$(prodAcrLoginServer)/$(imageName):latest'
