@@ -4,12 +4,13 @@ trigger:
  
 variables:
   imageName: 'azure-node-mini'
-  acrLoginServer: 'azureminiacr.azurecr.io'
+  devAcrLoginServer: 'azureminidev.azurecr.io'
+  prodAcrLoginServer: 'azureminiacr.azurecr.io'
  
 stages:
  
 # ------------------------
-# Stage 1: Build Image (runs on both dev and master)
+# Stage 1: Build Image
 # ------------------------
 - stage: Build
   displayName: Build and Push Docker Image
@@ -21,18 +22,31 @@ stages:
     steps:
     - checkout: self
  
+    # Build & push image to ACR based on branch
     - task: Docker@2
-      displayName: Build and Push Image
+      displayName: Build & Push image to DEV ACR
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/dev')
       inputs:
         command: buildAndPush
+        containerRegistry: 'azureacr_minidev'             # <-- Dev ACR service connection
         repository: '$(imageName)'
         dockerfile: '**/Dockerfile'
-        containerRegistry: 'azureacr_mini'
+        tags: |
+          latest
+ 
+    - task: Docker@2
+      displayName: Build & Push image to PROD ACR
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      inputs:
+        command: buildAndPush
+        containerRegistry: 'azureacr_mini'            # <-- Prod ACR service connection
+        repository: '$(imageName)'
+        dockerfile: '**/Dockerfile'
         tags: |
           latest
  
 # ------------------------
-# Stage 2: Deploy to DEV (only when branch = dev)
+# Stage 2: Deploy to DEV (branch = dev)
 # ------------------------
 - stage: DeployDev
   displayName: Deploy to DEV Environment
@@ -50,13 +64,14 @@ stages:
         deploy:
           steps:
           - task: AzureWebAppContainer@1
+            displayName: Deploy DEV Container
             inputs:
-              azureSubscription: 'AzureServiceConnection'
+              azureSubscription: 'AzureServiceConnection-Dev'  # <-- Dev app service connection
               appName: 'azure-mini-webapp-dev'
               containers: 'azureminidev.azurecr.io/azure-node-mini:latest'
  
 # ------------------------
-# Stage 3: Deploy to PROD (only when branch = master)
+# Stage 3: Deploy to PROD (branch = master)
 # ------------------------
 - stage: DeployProd
   displayName: Deploy to PRODUCTION Environment
@@ -65,7 +80,7 @@ stages:
   jobs:
   - deployment: DeployProdJob
     displayName: Deploy to PRODUCTION
-    environment: production   # Approval can be set on this env
+    environment: production
     pool:
       vmImage: 'ubuntu-latest'
  
@@ -74,8 +89,8 @@ stages:
         deploy:
           steps:
           - task: AzureWebAppContainer@1
+            displayName: Deploy PROD Container
             inputs:
-              azureSubscription: 'AzureServiceConnection'
+              azureSubscription: 'AzureServiceConnection-Prod'  # <-- Prod app service connection
               appName: 'azure-mini-webapp'
               containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
-
