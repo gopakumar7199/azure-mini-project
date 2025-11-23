@@ -91,7 +91,8 @@ stages:
           - task: AzureWebAppContainer@1
             displayName: Deploy PROD Container
             inputs:
-              azureSubscription: 'AzureServiceConnection-Prod'  # <-- Prod app service connection
+              azureSubscription: 'azureacr_mini'  # <-- Prod app service connection
               appName: 'azure-mini-webapp'
               containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
+
 
