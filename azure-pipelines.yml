@@ -1,14 +1,15 @@
 trigger:
+- dev
 - master
-
+ 
 variables:
   imageName: 'azure-node-mini'
   acrLoginServer: 'azureminiacr.azurecr.io'
-
+ 
 stages:
-
+ 
 # ------------------------
-# Stage 1: Build Image
+# Stage 1: Build Image (runs on both dev and master)
 # ------------------------
 - stage: Build
   displayName: Build and Push Docker Image
@@ -16,10 +17,10 @@ stages:
   - job: Build
     pool:
       vmImage: 'ubuntu-latest'
-
+ 
     steps:
     - checkout: self
-
+ 
     - task: Docker@2
       displayName: Build and Push Image
       inputs:
@@ -29,20 +30,21 @@ stages:
         containerRegistry: 'azureacr_mini'
         tags: |
           latest
-
+ 
 # ------------------------
-# Stage 2: Deploy to DEV
+# Stage 2: Deploy to DEV (only when branch = dev)
 # ------------------------
 - stage: DeployDev
   displayName: Deploy to DEV Environment
   dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
   jobs:
   - deployment: DeployDevJob
     displayName: Deploy to DEV
     environment: dev
     pool:
       vmImage: 'ubuntu-latest'
-
+ 
     strategy:
       runOnce:
         deploy:
@@ -52,20 +54,21 @@ stages:
               azureSubscription: 'AzureServiceConnection'
               appName: 'azure-mini-webapp-dev'
               containers: 'azureminiacr.azurecr.io/azure-node-mini:latest'
-
+ 
 # ------------------------
-# Stage 3: Deploy to PROD
+# Stage 3: Deploy to PROD (only when branch = master)
 # ------------------------
 - stage: DeployProd
   displayName: Deploy to PRODUCTION Environment
-  dependsOn: DeployDev
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployProdJob
     displayName: Deploy to PRODUCTION
-    environment: production   # Approval required here
+    environment: production   # Approval can be set on this env
     pool:
       vmImage: 'ubuntu-latest'
-
+ 
     strategy:
       runOnce:
         deploy:
